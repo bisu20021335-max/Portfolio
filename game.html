@@ -78,6 +78,18 @@
         @keyframes blink {
             50% { opacity: 0; }
         }
+
+        /* Home Button Style */
+        .home-btn {
+            transition: all 0.3s ease;
+            border: 1px solid rgba(0, 168, 255, 0.3);
+        }
+        .home-btn:hover {
+            background: rgba(0, 168, 255, 0.2);
+            box-shadow: 0 0 15px var(--navy-blue-glow);
+            color: white;
+            transform: translateY(-1px);
+        }
     </style>
 </head>
 <body class="p-4 flex flex-col h-screen">
@@ -86,6 +98,12 @@
         <div class="flex items-center gap-4">
             <div class="header-font text-xl font-bold tracking-widest text-white">ROKN CIC TERMINAL v4.2</div>
             <div id="connection-status" class="text-xs bg-blue-900 px-2 py-1 rounded">SECURE CONNECTION: ACTIVE</div>
+            
+            <!-- Added Home Button -->
+            <button href="https://bisu20021335-max.github.io/Portfolio.html" id="home-btn" class="home-btn flex items-center gap-2 px-3 py-1 rounded text-[10px] header-font font-bold uppercase tracking-wider">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                Main HQ
+            </button>
         </div>
         <div class="text-right">
             <div id="clock" class="text-lg font-bold">00:00:00 ZULU</div>
@@ -205,6 +223,7 @@
         const commInput = document.getElementById('comm-input');
         const alertBtn = document.getElementById('alert-btn');
         const clearBtn = document.getElementById('clear-btn');
+        const homeBtn = document.getElementById('home-btn');
         const decryptViz = document.getElementById('decryption-viz');
         let isAlert = false;
 
@@ -233,6 +252,17 @@
             terminalLogs.appendChild(p);
             terminalLogs.scrollTop = terminalLogs.scrollHeight;
         }
+
+        // Home Button Functionality (Reset UI)
+        homeBtn.addEventListener('click', () => {
+            if(confirm("시스템을 초기 상태로 복구하시겠습니까? (연결 초기화)")) {
+                terminalLogs.innerHTML = '';
+                addLog("[SYSTEM] Connection reset to Main HQ...", 'system');
+                addLog("[SYSTEM] Terminal re-initialized.", 'system');
+                if(isAlert) alertBtn.click(); // Reset alert if active
+                commInput.value = '';
+            }
+        });
 
         // Handle Input
         commInput.addEventListener('keypress', (e) => {
