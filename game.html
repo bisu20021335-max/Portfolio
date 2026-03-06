@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ROKN Operational Communication Interface</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=JetBrains+Mono:wght@300;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --navy-blue-dark: #001220;
+            --navy-blue-glow: #00a8ff;
+            --alert-red: #ff3e3e;
+            --terminal-green: #00ff41;
+        }
+
+        body {
+            background-color: var(--navy-blue-dark);
+            color: var(--navy-blue-glow);
+            font-family: 'JetBrains Mono', monospace;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .header-font { font-family: 'Orbitron', sans-serif; }
+
+        /* Scanning Radar Animation */
+        .radar {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            border: 2px solid rgba(0, 168, 255, 0.3);
+            position: relative;
+            background: radial-gradient(circle, rgba(0,168,255,0.1) 0%, rgba(0,0,0,0) 70%);
+        }
+        .radar::after {
+            content: "";
+            position: absolute;
+            width: 50%;
+            height: 50%;
+            top: 0; left: 0;
+            background: linear-gradient(45deg, rgba(0,168,255,0.6) 0%, rgba(0,0,0,0) 100%);
+            border-radius: 100% 0 0 0;
+            transform-origin: 100% 100%;
+            animation: radar-sweep 4s linear infinite;
+        }
+
+        @keyframes radar-sweep {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .glitch-text {
+            animation: glitch 2s infinite;
+        }
+
+        @keyframes glitch {
+            0% { text-shadow: 1px 0 var(--alert-red), -1px 0 var(--navy-blue-glow); }
+            50% { text-shadow: -1px 0 var(--alert-red), 1px 0 var(--navy-blue-glow); }
+            100% { text-shadow: 1px 0 var(--alert-red), -1px 0 var(--navy-blue-glow); }
+        }
+
+        .terminal-scroll {
+            scrollbar-width: thin;
+            scrollbar-color: var(--navy-blue-glow) transparent;
+        }
+
+        .alert-mode {
+            background-color: rgba(255, 0, 0, 0.05);
+            border: 1px solid var(--alert-red);
+            color: var(--alert-red) !important;
+        }
+
+        .blinking {
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            50% { opacity: 0; }
+        }
+    </style>
+</head>
+<body class="p-4 flex flex-col h-screen">
+    <!-- Top Status Bar -->
+    <header class="flex justify-between items-center border-b border-blue-900 pb-2 mb-4">
+        <div class="flex items-center gap-4">
+            <div class="header-font text-xl font-bold tracking-widest text-white">ROKN CIC TERMINAL v4.2</div>
+            <div id="connection-status" class="text-xs bg-blue-900 px-2 py-1 rounded">SECURE CONNECTION: ACTIVE</div>
+        </div>
+        <div class="text-right">
+            <div id="clock" class="text-lg font-bold">00:00:00 ZULU</div>
+            <div class="text-[10px] opacity-60">LAT: 34.1283 | LON: 127.3912</div>
+        </div>
+    </header>
+
+    <!-- Main Content Grid -->
+    <main class="grid grid-cols-12 gap-4 flex-grow overflow-hidden">
+        
+        <!-- Left Column: Radar and Fleet Status -->
+        <section class="col-span-3 flex flex-col gap-4">
+            <div class="bg-black/40 border border-blue-900 p-4 rounded flex flex-col items-center">
+                <h3 class="header-font text-xs mb-4 uppercase opacity-70">Sector Scanning</h3>
+                <div class="radar mb-4">
+                    <div class="absolute top-1/4 left-1/3 w-2 h-2 bg-red-500 rounded-full blinking shadow-[0_0_8px_red]"></div>
+                    <div class="absolute bottom-1/3 right-1/4 w-2 h-2 bg-blue-400 rounded-full shadow-[0_0_8px_blue]"></div>
+                </div>
+                <div class="w-full space-y-2 text-[10px]">
+                    <div class="flex justify-between"><span>TARGETS:</span><span class="text-red-500">01 DETECTED</span></div>
+                    <div class="flex justify-between"><span>FRIENDLY:</span><span class="text-blue-400">03 ACTIVE</span></div>
+                </div>
+            </div>
+
+            <div class="bg-black/40 border border-blue-900 p-4 rounded flex-grow">
+                <h3 class="header-font text-xs mb-2 uppercase opacity-70">Fleet Status</h3>
+                <div class="space-y-3">
+                    <div class="border-l-2 border-blue-500 pl-2">
+                        <div class="text-[11px] font-bold">DDG-991 SEJONG</div>
+                        <div class="w-full bg-blue-900/30 h-1 mt-1"><div class="bg-blue-500 h-full w-[92%]"></div></div>
+                        <div class="text-[9px] mt-1">FUEL: 92% | WEAPONS: READY</div>
+                    </div>
+                    <div class="border-l-2 border-blue-500 pl-2 opacity-60">
+                        <div class="text-[11px] font-bold">FFG-811 DAEGU</div>
+                        <div class="w-full bg-blue-900/30 h-1 mt-1"><div class="bg-blue-500 h-full w-[85%]"></div></div>
+                        <div class="text-[9px] mt-1">FUEL: 85% | WEAPONS: READY</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Center Column: Comm Terminal -->
+        <section class="col-span-6 flex flex-col gap-4">
+            <div id="terminal-window" class="bg-black/60 border border-blue-900 p-4 rounded flex-grow flex flex-col overflow-hidden">
+                <div class="flex justify-between items-center mb-2 border-b border-blue-900/30 pb-1">
+                    <span class="text-xs font-bold uppercase tracking-tighter">Encrypted Messaging Service</span>
+                    <span class="text-[9px] opacity-50">AES-256 BIT ENCRYPTION</span>
+                </div>
+                
+                <div id="terminal-logs" class="flex-grow overflow-y-auto terminal-scroll text-sm space-y-2 pr-2">
+                    <p class="text-blue-300/60">[SYSTEM] Terminal initialized...</p>
+                    <p class="text-blue-300/60">[SYSTEM] Authentication successful: Commander Lee</p>
+                    <p class="text-blue-300/60">[SYSTEM] Awaiting incoming transmission...</p>
+                </div>
+
+                <div class="mt-4 flex gap-2">
+                    <span class="text-blue-400 font-bold">></span>
+                    <input type="text" id="comm-input" placeholder="Type command or message..." 
+                           class="bg-transparent border-none outline-none text-white w-full text-sm placeholder:opacity-30">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <button id="alert-btn" class="bg-red-900/20 border border-red-500/50 hover:bg-red-700/40 py-3 rounded header-font text-xs font-bold transition-all uppercase tracking-widest text-red-500">
+                    Battle Stations (Red Alert)
+                </button>
+                <button id="clear-btn" class="bg-blue-900/20 border border-blue-500/50 hover:bg-blue-700/40 py-3 rounded header-font text-xs font-bold transition-all uppercase tracking-widest">
+                    Clear Terminal
+                </button>
+            </div>
+        </section>
+
+        <!-- Right Column: System Intel -->
+        <section class="col-span-3 flex flex-col gap-4">
+            <div class="bg-black/40 border border-blue-900 p-4 rounded h-1/2">
+                <h3 class="header-font text-xs mb-2 uppercase opacity-70">Digital decryption</h3>
+                <div id="decryption-viz" class="grid grid-cols-6 gap-1 opacity-40">
+                    <!-- Dynamic code grid via JS -->
+                </div>
+            </div>
+            
+            <div class="bg-black/40 border border-blue-900 p-4 rounded h-1/2 relative overflow-hidden">
+                <h3 class="header-font text-xs mb-2 uppercase opacity-70">Global Net Status</h3>
+                <div class="space-y-4 text-[10px]">
+                    <div class="flex items-center gap-2">
+                        <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+                        <span>SATELLITE LINK: STABLE</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+                        <span>SUB-NET BRIDGE: CONNECTED</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div id="alert-light" class="w-2 h-2 bg-blue-500 rounded-full transition-all"></div>
+                        <span id="alert-text">DEFCON LEVEL: 4</span>
+                    </div>
+                </div>
+                <!-- Mini visual decoration -->
+                <div class="absolute bottom-[-10px] right-[-10px] opacity-10">
+                    <svg width="100" height="100" viewBox="0 0 100 100">
+                        <path d="M10 50 Q 25 10 50 50 T 90 50" stroke="cyan" fill="none" stroke-width="2"/>
+                        <path d="M10 60 Q 25 20 50 60 T 90 60" stroke="cyan" fill="none" stroke-width="1"/>
+                    </svg>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer Information -->
+    <footer class="mt-4 flex justify-between text-[10px] opacity-40">
+        <div>OPERATOR: COMMANDER_KIM_882</div>
+        <div>PROPERTY OF THE REPUBLIC OF KOREA NAVY - CLASSIFIED</div>
+    </footer>
+
+    <script>
+        const terminalLogs = document.getElementById('terminal-logs');
+        const commInput = document.getElementById('comm-input');
+        const alertBtn = document.getElementById('alert-btn');
+        const clearBtn = document.getElementById('clear-btn');
+        const decryptViz = document.getElementById('decryption-viz');
+        let isAlert = false;
+
+        // Clock Update
+        function updateClock() {
+            const now = new Date();
+            const time = now.toISOString().split('T')[1].split('.')[0] + ' ZULU';
+            document.getElementById('clock').innerText = time;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // Add Log Entry
+        function addLog(msg, type = 'info') {
+            const p = document.createElement('p');
+            const timestamp = new Date().toLocaleTimeString('ko-KR', { hour12: false });
+            
+            let colorClass = 'text-blue-300';
+            if (type === 'system') colorClass = 'text-blue-300/60';
+            if (type === 'outgoing') colorClass = 'text-green-400';
+            if (type === 'incoming') colorClass = 'text-yellow-400';
+            if (type === 'alert') colorClass = 'text-red-500 font-bold uppercase';
+
+            p.className = colorClass;
+            p.innerHTML = `<span class="opacity-40">[${timestamp}]</span> ${msg}`;
+            terminalLogs.appendChild(p);
+            terminalLogs.scrollTop = terminalLogs.scrollHeight;
+        }
+
+        // Handle Input
+        commInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && commInput.value.trim() !== '') {
+                const val = commInput.value.trim();
+                addLog(`SENT: ${val}`, 'outgoing');
+                
+                // Simple Command Parsing
+                if (val.toLowerCase().includes('status')) {
+                    setTimeout(() => addLog('SYSTEM: ALL SYSTEMS NOMINAL. SQUADRON READY.', 'system'), 500);
+                } else if (val.toLowerCase().includes('help')) {
+                    setTimeout(() => addLog('AVAILABLE COMMANDS: STATUS, CLEAR, ALERT, ENCRYPT.', 'system'), 500);
+                } else {
+                    // Random Response Simulation
+                    setTimeout(() => {
+                        const responses = [
+                            "ROGER THAT. PROCEEDING TO COORDINATES.",
+                            "COMMUNICATION RECEIVED. OVER.",
+                            "AWAITING FURTHER ORDERS FROM COMMAND.",
+                            "ENCRYPTING TRANSMISSION..."
+                        ];
+                        const randomRes = responses[Math.floor(Math.random() * responses.length)];
+                        addLog(`RCVD: ${randomRes}`, 'incoming');
+                    }, 1000);
+                }
+                
+                commInput.value = '';
+            }
+        });
+
+        // Alert Toggle
+        alertBtn.addEventListener('click', () => {
+            isAlert = !isAlert;
+            const elements = [document.getElementById('terminal-window'), document.body];
+            const alertLight = document.getElementById('alert-light');
+            const alertText = document.getElementById('alert-text');
+
+            if (isAlert) {
+                elements.forEach(el => el.classList.add('alert-mode'));
+                alertBtn.innerText = "STAND DOWN (ALL CLEAR)";
+                addLog("!! RED ALERT ISSUED: COMBAT STATIONS !!", 'alert');
+                alertLight.style.backgroundColor = 'red';
+                alertLight.classList.add('blinking');
+                alertText.innerText = "DEFCON LEVEL: 1 (WAR)";
+                alertText.style.color = 'red';
+            } else {
+                elements.forEach(el => el.classList.remove('alert-mode'));
+                alertBtn.innerText = "Battle Stations (Red Alert)";
+                addLog("SYSTEM: Alert status downgraded to normal.", 'system');
+                alertLight.style.backgroundColor = 'var(--navy-blue-glow)';
+                alertLight.classList.remove('blinking');
+                alertText.innerText = "DEFCON LEVEL: 4";
+                alertText.style.color = 'inherit';
+            }
+        });
+
+        // Clear Terminal
+        clearBtn.addEventListener('click', () => {
+            terminalLogs.innerHTML = '';
+            addLog("Terminal cleared. Awaiting input...", 'system');
+        });
+
+        // Decryption Grid Generator
+        function initDecryptGrid() {
+            decryptViz.innerHTML = '';
+            for (let i = 0; i < 48; i++) {
+                const span = document.createElement('span');
+                span.className = 'text-[8px]';
+                span.innerText = Math.floor(Math.random() * 2);
+                decryptViz.appendChild(span);
+            }
+        }
+        setInterval(() => {
+            const spans = decryptViz.querySelectorAll('span');
+            spans.forEach(s => {
+                if (Math.random() > 0.8) s.innerText = Math.floor(Math.random() * 2);
+            });
+        }, 100);
+
+        initDecryptGrid();
+
+        // Initial welcome sequence
+        window.onload = () => {
+            setTimeout(() => addLog("INCOMING: [ADML] Check positions and report status.", "incoming"), 1500);
+        };
+    </script>
+</body>
+</html>
